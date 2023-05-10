@@ -358,6 +358,7 @@ $ sudo ceph -s
 }`,
 			reMatch: []*regexp.Regexp{
 				regexp.MustCompile(`slow_requests{cluster="ceph"} 3`),
+				regexp.MustCompile(`slow_request_osds{cluster="ceph",osd="osd.39"} 1`),
 			},
 		},
 		{
@@ -377,6 +378,7 @@ $ sudo ceph -s
 }`,
 			reMatch: []*regexp.Regexp{
 				regexp.MustCompile(`slow_requests{cluster="ceph"} 3`),
+				regexp.MustCompile(`slow_request_osds{cluster="ceph",osd="osd.39"} 1`),
 			},
 		},
 		{
@@ -396,6 +398,13 @@ $ sudo ceph -s
 }`,
 			reMatch: []*regexp.Regexp{
 				regexp.MustCompile(`slow_requests{cluster="ceph"} 18`),
+				regexp.MustCompile(`slow_request_osds{cluster="ceph",osd="osd.114"} 1`),
+				regexp.MustCompile(`slow_request_osds{cluster="ceph",osd="osd.116"} 1`),
+				regexp.MustCompile(`slow_request_osds{cluster="ceph",osd="osd.33"} 1`),
+				regexp.MustCompile(`slow_request_osds{cluster="ceph",osd="osd.34"} 1`),
+				regexp.MustCompile(`slow_request_osds{cluster="ceph",osd="osd.43"} 1`),
+				regexp.MustCompile(`slow_request_osds{cluster="ceph",osd="osd.49"} 1`),
+				regexp.MustCompile(`slow_request_osds{cluster="ceph",osd="osd.53"} 1`),
 			},
 		},
 		{

@@ -165,6 +165,9 @@ type ClusterHealthCollector struct {
 	// SlowOps depicts no. of total slow ops in the cluster
 	SlowOps prometheus.Gauge
 
+	// SlowOpsOsds depicts which osds has slow ops in the cluster
+	SlowOpsOsds *prometheus.GaugeVec
+
 	// DegradedObjectsCount gives the no. of RADOS objects are constitute the degraded PGs.
 	// This includes object replicas in its count.
 	DegradedObjectsCount prometheus.Gauge
@@ -533,6 +536,15 @@ func NewClusterHealthCollector(exporter *Exporter) *ClusterHealthCollector {
 				Help:        "No. of slow requests/slow ops",
 				ConstLabels: labels,
 			},
+		),
+		SlowOpsOsds: prometheus.NewGaugeVec(
+			prometheus.GaugeOpts{
+				Namespace:   cephNamespace,
+				Name:        "slow_request_osds",
+				Help:        "OSDs that have slow ops",
+				ConstLabels: labels,
+			},
+			[]string{"osd"},
 		),
 		DegradedPGs: prometheus.NewGauge(
 			prometheus.GaugeOpts{
@@ -994,6 +1006,7 @@ func (c *ClusterHealthCollector) metricsList() []prometheus.Metric {
 func (c *ClusterHealthCollector) collectorList() []prometheus.Collector {
 	return []prometheus.Collector{
 		c.PGState,
+		c.SlowOpsOsds,
 	}
 }
 
@@ -1100,7 +1113,7 @@ func (c *ClusterHealthCollector) collect(ch chan<- prometheus.Metric) error {
 		stuckUncleanRegex    = regexp.MustCompile(`([\d]+) pgs stuck unclean`)
 		stuckUndersizedRegex = regexp.MustCompile(`([\d]+) pgs stuck undersized`)
 		stuckStaleRegex      = regexp.MustCompile(`([\d]+) pgs stuck stale`)
-		slowOpsRegexNautilus = regexp.MustCompile(`([\d]+) slow ops, oldest one blocked for ([\d]+) sec`)
+		slowOpsRegexNautilus = regexp.MustCompile(`([\d]+) slow ops, oldest one blocked for ([\d]+) sec, (.+) ha([\w\.]+) .+`)
 		newCrashreportRegex  = regexp.MustCompile(`([\d]+) daemons have recently crashed`)
 		tooManyRepairs       = regexp.MustCompile(`Too many repaired reads on ([\d]+) OSDs`)
 		osdmapFlagsRegex     = regexp.MustCompile(`([^ ]+) flag\(s\) set`)
@@ -1146,12 +1159,18 @@ func (c *ClusterHealthCollector) collect(ch chan<- prometheus.Metric) error {
 		}
 
 		matched = slowOpsRegexNautilus.FindStringSubmatch(s.Summary)
-		if len(matched) == 3 {
+		if len(matched) == 5 {
 			v, err := strconv.Atoi(matched[1])
 			if err != nil {
 				return err
 			}
+			d := strings.Replace(matched[3], "daemons ", "", 1)
+			d = strings.Trim(d, "[]")
+			daemons := strings.Split(d, ",")
 			c.SlowOps.Set(float64(v))
+			for _, osd := range daemons {
+				c.SlowOpsOsds.WithLabelValues(osd).Set(1)
+			}
 		}
 	}
 
@@ -1169,12 +1188,18 @@ func (c *ClusterHealthCollector) collect(ch chan<- prometheus.Metric) error {
 
 		if k == "SLOW_OPS" {
 			matched := slowOpsRegexNautilus.FindStringSubmatch(check.Summary.Message)
-			if len(matched) == 3 {
+			if len(matched) == 5 {
 				v, err := strconv.Atoi(matched[1])
 				if err != nil {
 					return err
 				}
+				d := strings.Replace(matched[3], "daemons ", "", 1)
+				d = strings.Trim(d, "[]")
+				daemons := strings.Split(d, ",")
 				c.SlowOps.Set(float64(v))
+				for _, osd := range daemons {
+					c.SlowOpsOsds.WithLabelValues(osd).Set(1)
+				}
 			}
 		}
 
