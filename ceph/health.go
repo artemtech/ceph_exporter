@@ -1203,6 +1203,10 @@ func (c *ClusterHealthCollector) collect(ch chan<- prometheus.Metric) error {
 			}
 		}
 
+		if k != "SLOW_OPS" {
+			c.SlowOpsOsds.Reset()
+		}
+
 		if k == "RECENT_CRASH" {
 			matched := newCrashreportRegex.FindStringSubmatch(check.Summary.Message)
 			if len(matched) == 2 {
